@@ -1,59 +1,7 @@
 #include <algorithm>
-#include <iostream>
-#include <memory>
-
-#include "yolo_components.h"
-#include "common_types.h"
-#include "acl/acl.h"
-
-bool IsImageFile(const std::filesystem::path& path) {
-    if (!path.has_extension()) {
-        return false;
-    }
-
-    std::string ext = path.extension().string();
-    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
-
-    return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp" ||
-        ext == ".webp" || ext == ".tif" || ext == ".tiff";
-}
-
-std::vector<std::filesystem::path> CollectImages(const std::filesystem::path& input) {
-    std::vector<std::filesystem::path> files;
-    if (std::filesystem::is_regular_file(input) && IsImageFile(input)) {
-        files.push_back(input);
-        return files;
-    }
-    if (!std::filesystem::is_directory(input)) {
-        return files;
-    }
-
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(input)) {
-        if (entry.is_regular_file() && IsImageFile(entry.path())) {
-            files.push_back(entry.path());
-        }
-    }
-
-    std::sort(files.begin(), files.end());
-    return files;
-}
-
-std::filesystem::path ResolveImageInputPath(const std::filesystem::path& input) {
-    if (std::filesystem::is_regular_file(input)) {
-        return input;
-    }
-    if (!std::filesystem::is_directory(input)) {
-        return input;
-    }
-
-    const auto images_dir = input / "images";
-    if (std::filesystem::is_directory(images_dir)) {
-        return images_dir;
-    }
-    return input;
-}
+#include <string>
+#include <stdexcept>
+#include "models_yolo.h"
 
 std::vector<std::string> catsname{
     "person",        "bicycle",      "car",           "motorcycle",   "airplane",
@@ -74,15 +22,34 @@ std::vector<std::string> catsname{
     "vase",          "scissors",     "teddy bear",    "hair drier",   "toothbrush"
 };
 
+std::unique_ptr<AI::CV::YOLO::YOLO> GetModel(const std::string& type, int mode, const std::string& modelpath,
+        int deviceid, int batchsize, float confth, float iouth, bool isSeg=false)
+{
+    if (type == "v5") return std::make_unique<AI::CV::YOLO::YOLOv5>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth, iouth);
+    else if (type == "v5u") return std::make_unique<AI::CV::YOLO::YOLOv5u>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth, iouth);
+    else if (type == "v6") return std::make_unique<AI::CV::YOLO::YOLOv6>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth, iouth);
+    else if (type == "v7") return std::make_unique<AI::CV::YOLO::YOLOv7>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth, iouth);
+    else if (type == "v8") return std::make_unique<AI::CV::YOLO::YOLOv8>(mode, modelpath, deviceid, batchsize, catsname, isSeg, 640, 640, confth, iouth);
+    else if (type == "v9") return std::make_unique<AI::CV::YOLO::YOLOv9>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth, iouth);
+    else if (type == "10") return std::make_unique<AI::CV::YOLO::YOLO10>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth);
+    else if (type == "11") return std::make_unique<AI::CV::YOLO::YOLO11>(mode, modelpath, deviceid, batchsize, catsname, isSeg, 640, 640, confth, iouth);
+    else if (type == "12") return std::make_unique<AI::CV::YOLO::YOLO12>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth, iouth);
+    else if (type == "13") return std::make_unique<AI::CV::YOLO::YOLO13>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth, iouth);
+    else if (type == "26") return std::make_unique<AI::CV::YOLO::YOLO26>(mode, modelpath, deviceid, batchsize, catsname, isSeg, 640, 640, confth);
+    else if (type == "x") return std::make_unique<AI::CV::YOLO::YOLOX>(mode, modelpath, deviceid, batchsize, catsname, 640, 640, confth, iouth);
+    else throw std::invalid_argument("\n[ERROR] 无效 model type. 取值空间 {\"v5\", \"v5u\", \"v6\", \"v7\", \"v8\", \"v9\", \"10\", \"11\", \"12\", \"13\", \"26\", \"x\"}.");
+}
 
 int main(int argc, char* argv[])
 {
     int mode{0};
-    int modeltype{0};
     int batchSize{1};
-    int anchorfactor{3};
-    bool needDetailInfo{true};
-    bool isyolox{false};
+    int deviceid{0};
+
+    float confth{0.25f}, iouth{0.7f};
+    bool isSeg{false};
+
+    std::string modeltype;
     std::string modelpath;
     std::string inputpath;
     std::string outputdir;
@@ -91,14 +58,14 @@ int main(int argc, char* argv[])
     {
         std::string arg=argv[i];
         if (arg=="--mode" && i+1<argc) mode = std::stoi(argv[i+1]);
+        else if (arg=="--type" && i+1<argc) modeltype=argv[i+1];
         else if (arg=="--model" && i+1<argc) modelpath=argv[i+1];
         else if (arg=="--input" && i+1<argc) inputpath=argv[i+1];
         else if (arg=="--output" && i+1<argc) outputdir=argv[i+1];
-        else if (arg=="--without-detail-info") needDetailInfo=false;
-        else if (arg=="--bz") batchSize=std::stoi(argv[i+1]);
-        else if (arg=="--modeltype" && i+1<argc) modeltype=std::stoi(argv[i+1]);
-        else if (arg=="--isyolox") isyolox=true;
-        else if (arg=="--anchorfactor" && i+1<argc) anchorfactor=std::stoi(argv[i+1]);
+        else if (arg=="--bz" && i+1<argc) batchSize=std::stoi(argv[i+1]);
+        else if (arg=="--conf" && i+1<argc) confth=std::stof(argv[i+1]);
+        else if (arg=="--iou" && i+1<argc) iouth=std::stof(argv[i+1]);
+        else if (arg=="--isSeg") isSeg=true;
     }
 
     if (modelpath.empty() || inputpath.empty()) {
@@ -107,61 +74,17 @@ int main(int argc, char* argv[])
                   << "--input <image_or_dir> [--output <dir>]" << std::endl;
         return 1;
     }
-    
-    // 解析输入图像数据
-    const auto resolved_inputpath = ResolveImageInputPath(inputpath);
-    std::vector<std::filesystem::path> im_paths = CollectImages(resolved_inputpath);
-    if (im_paths.empty())
-    {
-        std::cerr<<"[ERROR] No images found in: " << resolved_inputpath.string() << std::endl;
-        return 1;
-    }
 
-    ZWXT::AI::CV::YOLOAnchorFree model1(mode, modelpath, 0, "YOLO11", catsname, batchSize);
-    if (!model1.Init()) return 1;
+    std::transform(modeltype.begin(), modeltype.end(), modeltype.begin(), [](unsigned char c){return static_cast<char>(std::tolower(c));});
 
-    std::vector<ZWXT::AI::CV::YOLO::Detection> outPreds;
+    std::unique_ptr<AI::CV::YOLO::YOLO> model = GetModel(modeltype, mode, modelpath, deviceid, batchSize, confth, iouth, isSeg);
+    if (!model->Init()) return 1;
 
-    model1.Execute(im_paths, outPreds, outputdir);
+    // if (!model->Execute(inputpath, outputdir)) return 1;
+    std::vector<std::filesystem::path> inputs(batchSize);
+    inputs[0] = std::filesystem::path(inputpath);
+    std::vector<AI::CV::YOLO::OutputPerIm> outputs;
 
-    if (true)
-    {
-        ZWXT::AI::CV::YOLOAnchorFree model2(mode, modelpath, 0, "YOLO11", catsname, batchSize);
-        if (!model2.Init()) return 1;
-
-        // model2.Execute(im_paths, outPreds, outputdir);
-    }
-
-    model1.Execute(im_paths, outPreds, outputdir);
-
-    // std::unique_ptr<ZWXT::AI::CV::YOLOModel> model;
-
-    // if (modeltype == 0)
-    // {
-    //     model = std::make_unique<ZWXT::AI::CV::YOLOEnd2end>(mode, modelpath, 0, catsname, batchSize);
-    // }
-    // else if (modeltype == 1)
-    // {
-    //     model = std::make_unique<ZWXT::AI::CV::YOLOAnchorFree>(mode, modelpath, 0, catsname, batchSize);
-    // }
-    // else
-    // {
-    //     model = std::make_unique<ZWXT::AI::CV::YOLOAnchorBase>(mode, modelpath, 0, catsname, batchSize, 640, 640, 80, 0.25f, 0.7f, anchorfactor, 300, 114,
-    //         isyolox, true, needDetailInfo);
-    // }
-    
-    // if (!model->Init()) return 1;
-
-    // // 解析输入图像数据
-    // const auto resolved_inputpath = ResolveImageInputPath(inputpath);
-    // std::vector<std::filesystem::path> im_paths = CollectImages(resolved_inputpath);
-    // if (im_paths.empty())
-    // {
-    //     std::cerr<<"[ERROR] No images found in: " << resolved_inputpath.string() << std::endl;
-    //     return 1;
-    // }
-
-    // std::vector<ZWXT::AI::CV::YOLO::Detection> outPreds;
-
-    // model->Execute(im_paths, outPreds, outputdir);
+    if (!model->Execute(inputs, outputs, true)) return 1;
+    return 0;
 }

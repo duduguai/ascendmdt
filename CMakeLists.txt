@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(
-    test
+    YOLO
     VERSION 0.0.1
     LANGUAGES CXX
 )
@@ -30,7 +30,8 @@ endif()
 
 set(ACL_HOME $ENV{ASCEND_TOOLKIT_HOME})
 
-file(GLOB LIB_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
+# file(GLOB LIB_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
+set(LIB_FILES ${CMAKE_SOURCE_DIR}/src/aclsession_core.cpp ${CMAKE_SOURCE_DIR}/src/aclsession_yolo.cpp ${CMAKE_SOURCE_DIR}/src/models_core_yolo.cpp ${CMAKE_SOURCE_DIR}/src/models_yolo.cpp)
 message(STATUS ${LIB_FILES})
 add_library(lib SHARED)
 target_sources(lib PRIVATE ${LIB_FILES})
@@ -50,7 +51,7 @@ target_link_libraries(lib
 )
 set_target_properties(lib
     PROPERTIES
-        OUTPUT_NAME ${IDENTITY}
+        OUTPUT_NAME "_${IDENTITY}"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib"
 )
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(
-    YOLO
+    Ascend-Model-Deploy-ToolKit
     VERSION 0.0.1
     LANGUAGES CXX
 )
@@ -31,41 +31,32 @@ endif()
 set(ACL_HOME $ENV{ASCEND_TOOLKIT_HOME})
 
 # file(GLOB LIB_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
-set(LIB_FILES ${CMAKE_SOURCE_DIR}/src/aclsession_core.cpp ${CMAKE_SOURCE_DIR}/src/aclsession_yolo.cpp ${CMAKE_SOURCE_DIR}/src/models_core_yolo.cpp ${CMAKE_SOURCE_DIR}/src/models_yolo.cpp)
+set(LIB_FILES ${CMAKE_SOURCE_DIR}/src/aclsession/aclsession_core.cpp ${CMAKE_SOURCE_DIR}/src/aclsession/aclsession_yolo.cpp ${CMAKE_SOURCE_DIR}/src/modelcore/models_core_yolo.cpp ${CMAKE_SOURCE_DIR}/src/models/models_yolo.cpp)
 message(STATUS ${LIB_FILES})
-add_library(lib SHARED)
-target_sources(lib PRIVATE ${LIB_FILES})
+add_library(lib0 SHARED)
+target_sources(lib0 PRIVATE ${LIB_FILES})
 target_compile_features(lib PUBLIC cxx_std_17)
-target_include_directories(lib
+target_include_directories(lib0
     PUBLIC
-        "${CMAKE_SOURCE_DIR}/include"
+        "${CMAKE_SOURCE_DIR}/inc/aclsession/core"
+        "${CMAKE_SOURCE_DIR}/inc/aclsession/yolo"
+        "${CMAKE_SOURCE_DIR}/inc/modelcore/yolo"
+        "${CMAKE_SOURCE_DIR}/inc/models/yolo"
+        "${CMAKE_SOURCE_DIR}/inc/tools"
         "${ACL_HOME}/${ARCH}/include"
         ${OpenCV_INCLUDE_DIRS}
 )
-target_link_libraries(lib
+target_link_libraries(lib0
     PUBLIC
         "${ACL_HOME}/${ARCH}/lib64/libascendcl.so"
         "${ACL_HOME}/${ARCH}/lib64/libacl_dvpp.so"
         "${ACL_HOME}/${ARCH}/lib64/libopapi_cv.so"
         ${OpenCV_LIBRARIES}
 )
-set_target_properties(lib
+set_target_properties(lib0
     PROPERTIES
-        OUTPUT_NAME "_${IDENTITY}"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib"
+        OUTPUT_NAME "_yolo"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib/${ARCH}"
 )
 
-add_executable(demo ${CMAKE_SOURCE_DIR}/main.cpp)
-target_link_libraries(demo
-    PRIVATE
-        lib   
-)
-set_target_properties(demo
-    PROPERTIES
-        OUTPUT_NAME ${IDENTITY}
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin"
-)
-
-message(STATUS "Shared library target : ${IDENTITY}")
-message(STATUS "Shared library output : ${CMAKE_SOURCE_DIR}/lib")
-message(STATUS "Demo output           : ${CMAKE_SOURCE_DIR}/bin")
+message(STATUS "Shared library output : ${CMAKE_SOURCE_DIR}/lib/${ARCH}")

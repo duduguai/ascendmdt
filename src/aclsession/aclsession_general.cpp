@@ -1,9 +1,9 @@
 #include <iostream>
-#include "aclsession_base.h"
+#include "aclsession_general.h"
 
 namespace AI
 {
-    bool AclSessionBase::CheckTensorConsist(int requireNum, int mode)
+    bool AclSessionGeneral::CheckTensorConsist(int requireNum, int mode)
     {
         int actualTensorNum;
 
@@ -20,7 +20,7 @@ namespace AI
         return true;
     }
 
-    bool AclSessionBase::CheckBytesConsist(int bufferSz, int mode, int idx)
+    bool AclSessionGeneral::CheckBytesConsist(int bufferSz, int mode, int idx)
     {
         int actualBytesNum;
 
@@ -38,7 +38,7 @@ namespace AI
         return true;
     }
 
-    bool AclSessionBase::PrepareBuffer(int idx, void*& buffer, int bufferSz, int mode)
+    bool AclSessionGeneral::PrepareBuffer(int idx, void*& buffer, int bufferSz, int mode)
     {
         if (runMode == ACL_HOST)
         {
@@ -53,7 +53,7 @@ namespace AI
         return true;
     }
 
-    bool AclSessionBase::Host2DeviceEP()
+    bool AclSessionGeneral::Host2DeviceEP()
     {
         if (runMode == ACL_HOST)
         {
@@ -69,7 +69,7 @@ namespace AI
         return true;
     }
 
-    bool AclSessionBase::Device2HostEP()
+    bool AclSessionGeneral::Device2HostEP()
     {
         if (runMode == ACL_HOST)
         {
@@ -85,9 +85,9 @@ namespace AI
         return true;
     }
 
-    AclSessionBase::AclSessionBase(const std::string& modelpath, int deviceid, SessionParamExec<BaseIn, BaseOut>* paramptr, 
+    AclSessionGeneral::AclSessionGeneral(const std::string& modelpath, int deviceid, SessionParamExec<BaseIn, BaseOut>* paramptr, 
                 int batchsize, bool needrecordtime, bool isaipp):
                 AclSession(modelpath, deviceid, batchsize, needrecordtime), isAipp(isaipp), paramPtr(paramptr)
                 {}
-    AclSessionBase::~AclSessionBase(){}
+    AclSessionGeneral::~AclSessionGeneral(){}
 }

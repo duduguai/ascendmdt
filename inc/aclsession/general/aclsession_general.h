@@ -1,10 +1,10 @@
 #pragma once
 #include "aclsession_core.h"
-#include "types_session_base.h"
+#include "types_session_general.h"
 
 namespace AI
 {
-    class AclSessionBase: public AclSession
+    class AclSessionGeneral: public AclSession
     {
         private:
             // 是否启用 AIPP 功能标志位
@@ -24,8 +24,8 @@ namespace AI
             bool Device2HostEP() override;
 
         public:
-            AclSessionBase(const std::string& modelpath, int deviceid, SessionParamExec<BaseIn, BaseOut>* paramptr, 
+            AclSessionGeneral(const std::string& modelpath, int deviceid, SessionParamExec<BaseIn, BaseOut>* paramptr, 
                 int batchsize, bool needrecordtime, bool isaipp);
-            virtual ~AclSessionBase();
+            virtual ~AclSessionGeneral();
     };
 }

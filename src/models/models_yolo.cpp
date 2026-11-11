@@ -1,4 +1,5 @@
-#include "models_yolo.h"
+#include "models_yolo_base.h"
+#include "models_yolo_list.h"
 
 namespace AI::CV::YOLO
 {

@@ -539,9 +539,15 @@ namespace AI::CV::YOLO
 
     bool BaseCore::Execute(std::vector<std::filesystem::path> imBatchPaths, std::vector<OutputPerIm>& outputs, bool verbose)
     {
-        if (imBatchPaths.size() != batchSize)
+        if (imBatchPaths.empty())
         {
-            std::cout<<"[ERROR] 输入图像数量与模型 BatchSize 不匹配, 退出推理流程."<<std::endl;
+            std::cout<<"[ERROR] 推理输入数据为空, 退出推理流程."<<std::endl;
+            return false;
+        }
+
+        if (imBatchPaths.size() > batchSize)
+        {
+            std::cout<<"[ERROR] 单次推理数据量大于 BatchSize, 退出推理流程."<<std::endl;
             return false;
         }
 
